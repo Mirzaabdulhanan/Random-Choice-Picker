@@ -49,7 +49,8 @@ https://mirzaabdulhanan.github.io/Random-Choice-Picker/
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/your-username/random-choice-picker.git
+   git clone https://mirzaabdulhanan.github.io/Random-Choice-Picker/
+
    cd random-choice-picker
    
 2. Open index.html in your browser.
