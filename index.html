@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Random Choice Picker</title>
+  <style>
+    /* Root and Variables */
+    :root {
+      --color-bg: #ffffff;
+      --color-text-primary: #111827;
+      --color-text-secondary: #6b7280;
+      --color-accent: #111827;
+      --color-card-bg: #f9fafb;
+      --color-border: #e5e7eb;
+      --font-heading: 'Poppins', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --border-radius: 0.75rem;
+      --shadow-light: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-hover: 0 4px 8px rgba(0,0,0,0.12);
+      --transition-speed: 0.3s;
+    }
+
+    /* Background container fills viewport */
+    #background {
+      position: fixed;
+      inset: 0;
+      z-index: -100;
+      overflow: hidden;
+      background: radial-gradient(ellipse at bottom, #0b0c17 0%, #050509 70%);
+    }
+
+    /* Starfield canvas */
+    #stars-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+      background: transparent;
+    }
+
+    /* Blackhole ring container */
+    #blackholes {
+      position: absolute;
+      top: 10vh;
+      left: 5vw;
+      right: 5vw;
+      bottom: 10vh;
+      pointer-events: none;
+      overflow: visible;
+      z-index: 1;
+    }
+
+    /* Blackhole rings */
+    .blackhole {
+      position: absolute;
+      border: 2px solid rgba(255 255 255 / 0.15);
+      border-radius: 50%;
+      box-shadow:
+        inset 0 0 10px rgba(0,0,0,0.9),
+        0 0 20px rgba(255 255 255 / 0.08),
+        0 0 30px rgba(255 255 255 / 0.06);
+      animation: rotate-ring linear infinite;
+      filter: drop-shadow(0 0 5px rgba(255 255 255 / 0.12));
+      mix-blend-mode: screen;
+      opacity: 0.7;
+    }
+    /* Different blackhole sizes, speeds and positions */
+    .blackhole.one {
+      width: 160px;
+      height: 160px;
+      top: 25%;
+      left: 10%;
+      animation-duration: 120s;
+      animation-direction: normal;
+    }
+    .blackhole.two {
+      width: 100px;
+      height: 100px;
+      top: 60%;
+      left: 30%;
+      animation-duration: 90s;
+      animation-direction: reverse;
+    }
+    .blackhole.three {
+      width: 120px;
+      height: 120px;
+      top: 30%;
+      right: 15%;
+      animation-duration: 75s;
+      animation-direction: normal;
+      opacity: 0.55;
+    }
+
+    @keyframes rotate-ring {
+      from {
+        transform: rotate(0deg);
+      } to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Moons container */
+    #moons {
+      position: absolute;
+      bottom: 15vh;
+      right: 10vw;
+      width: 140px;
+      height: 140px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Moon SVG styling and animation */
+    svg.moon {
+      width: 100%;
+      height: 100%;
+      fill: #bbb;
+      stroke: #888;
+      stroke-width: 1.5;
+      filter: drop-shadow(0 0 8px rgba(255 255 255 / 0.75));
+      animation: floatMoon 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatMoon {
+      0% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 8px rgba(255 255 255 / 0.75));
+      }
+      50% {
+        transform: translateY(-10px);
+        filter: drop-shadow(0 0 12px rgba(255 255 255 / 1));
+      }
+      100% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 8px rgba(255 255 255 / 0.75));
+      }
+    }
+
+    /* Additional smaller moon - faint and pulsating */
+    #moons .small-moon {
+      position: absolute;
+      width: 65px;
+      height: 65px;
+      top: 80px;
+      left: 80px;
+      opacity: 0.3;
+      animation: pulseMoon 8s infinite alternate ease-in-out;
+      filter: drop-shadow(0 0 4px rgba(255 255 255 / 0.4));
+      fill: #aaa;
+      stroke: #666;
+    }
+    @keyframes pulseMoon {
+      0% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.55;
+        transform: scale(1.15);
+      }
+      100% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+    }
+
+    /* Page layout */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 4rem 1.5rem;
+      min-height: 100vh;
+      position: relative;
+      z-index: 10;
+      background: transparent;
+      overflow-x: hidden;
+      font-family: var(--font-body);
+    }
+
+    /* Glass effect container - Dark */
+    main.container {
+      width: 100%;
+      max-width: 1200px;
+      background-color: rgba(25 25 35 / 0.75);
+      backdrop-filter: saturate(210%) blur(20px);
+      -webkit-backdrop-filter: saturate(210%) blur(20px);
+      border-radius: var(--border-radius);
+      box-shadow: 0 10px 36px rgba(10, 10, 15, 0.8);
+      padding: 3rem 4rem;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 3rem;
+      border: 1px solid rgba(255 255 255 / 0.15);
+      margin: 0 auto;
+      position: relative;
+      z-index: 20;
+      color: #e0e0e0;
+    }
+
+    /* Heading */
+    h1 {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: clamp(3rem, 5vw, 4.5rem);
+      margin: 0 0 0.3rem 0;
+      color: #f0f0f5;
+      user-select: none;
+      text-align: center;
+      text-shadow: 0 0 10px rgba(240, 240, 245, 0.6);
+      line-height: 1.1;
+    }
+
+    /* Instruction Text */
+    p.instruction {
+      font-size: 1.125rem;
+      font-weight: 500;
+      color: #a0a0b0;
+      margin: 0 0 1.75rem 0;
+      text-align: center;
+      user-select: none;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.4;
+    }
+
+    /* Input form */
+    form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+      gap: 1.5rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 1.25rem 1.5rem;
+      font-size: 1.125rem;
+      font-family: var(--font-body);
+      border: 1px solid rgba(255 255 255 / 0.15);
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 8px rgba(0 0 0 0.6);
+      transition:
+        border-color var(--transition-speed) ease,
+        box-shadow var(--transition-speed) ease,
+        transform var(--transition-speed) ease;
+      outline-offset: 2px;
+      color: #eee;
+      background-color: rgba(30 30 42 / 0.85);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      caret-color: #f0f0f5;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      box-sizing: border-box;
+    }
+
+    input[type="text"]::placeholder {
+      color: #a0a0b0;
+      opacity: 0.85;
+    }
+
+    input[type="text"]:focus {
+      border-color: #f0f0f5;
+      box-shadow: 0 4px 20px #f0f0f5;
+      transform: scale(1.02);
+      outline: none;
+      background-color: rgba(40 40 60 / 0.9);
+    }
+
+    /* Clear Button */
+    button#clear-button {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      font-family: var(--font-body);
+      color: #111827;
+      background-color: #f0f0f5;
+      border: none;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 12px rgba(255 255 255 / 0.75);
+      cursor: pointer;
+      transition: background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+      user-select: none;
+    }
+    button#clear-button:hover,
+    button#clear-button:focus {
+      background-color: #e2e6ea;
+      color: #111827;
+      outline: none;
+      transform: scale(1.03);
+      box-shadow: 0 6px 20px rgba(255 255 255 / 0.85);
+    }
+    button#clear-button:active {
+      transform: scale(0.98);
+    }
+
+    /* Result Card */
+    section.result-container {
+      text-align: center;
+      min-height: 4.5rem;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    div.result-card {
+      display: inline-block;
+      background-color: rgba(255 255 255 / 0.12);
+      padding: 1.25rem 2.5rem;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 16px rgba(0 0 0 / 0.45);
+      font-size: clamp(1rem, 5vw, 1.75rem);
+      font-weight: 600;
+      color: #ffffff;
+      user-select: text;
+      transition:
+        background-color 0.3s ease,
+        box-shadow 0.3s ease,
+        transform 0.3s ease;
+      cursor: default;
+      width: 100%;
+      max-width: 100%;
+      word-break: break-word;
+      box-sizing: border-box;
+      text-shadow: none;
+      max-inline-size: 100%;
+    }
+
+    div.result-card:hover {
+      box-shadow: 0 8px 36px rgba(0 0 0 / 0.7);
+      background-color: rgba(255 255 255 / 0.2);
+      transform: scale(1.03);
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      body {
+        padding: 3rem 1rem;
+      }
+      main.container {
+        padding: 2rem 2rem;
+        max-width: 90vw;
+      }
+      p.instruction {
+        font-size: 1rem;
+        max-width: 100%;
+      }
+      form {
+        max-width: 100%;
+      }
+      input[type="text"] {
+        font-size: 1rem;
+        padding: 1rem 1.25rem;
+      }
+      button#clear-button {
+        font-size: 1.1rem;
+        padding: 0.9rem 1.25rem;
+      }
+      div.result-card {
+        font-size: 1.25rem;
+        padding: 1rem 2rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      h1 {
+        font-size: 2.5rem;
+      }
+      div.result-card {
+        font-size: 1.1rem;
+        padding: 0.75rem 1.5rem;
+      }
+      button#clear-button {
+        font-size: 1rem;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div id="background" aria-hidden="true">
+    <canvas id="stars-canvas"></canvas>
+    <div id="blackholes" aria-hidden="true" role="presentation">
+      <div class="blackhole one"></div>
+      <div class="blackhole two"></div>
+      <div class="blackhole three"></div>
+    </div>
+    <div id="moons" aria-hidden="true" role="presentation">
+      <svg class="moon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" role="img" >
+        <circle cx="32" cy="32" r="30" fill="#bbb"/>
+        <path fill="#888" d="M38 2a30 30 0 1 1-19.5 53 25 25 0 1 0 23-43 30 30 0 0 1-3.5-10z"/>
+      </svg>
+      <svg class="moon small-moon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" role="img">
+        <circle cx="32" cy="32" r="30" fill="#999"/>
+        <path fill="#666" d="M38 2a30 30 0 1 1-19.5 53 25 25 0 1 0 23-43 30 30 0 0 1-3.5-10z"/>
+      </svg>
+    </div>
+  </div>
+
+  <main class="container" role="main" aria-labelledby="main-title">
+    <h1 id="main-title">Random Choice Picker</h1>
+    <p class="instruction">Enter all of the choices divided by a comma (','). Press Enter when you're done.</p>
+    <form id="choice-form" aria-describedby="form-instructions" novalidate>
+      <input
+        type="text"
+        id="choices-input"
+        name="choices"
+        autocomplete="off"
+        aria-label="Choices input"
+        placeholder="e.g. Apple, Banana, Cherry"
+      />
+      <button type="button" id="clear-button" aria-label="Clear choices and result">Clear Choices</button>
+    </form>
+    <section
+      class="result-container"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-relevant="text"
+    >
+      <div
+        id="result"
+        class="result-card"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <!-- Random choice result will appear here -->
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const form = document.getElementById('choice-form');
+      const input = document.getElementById('choices-input');
+      const resultDiv = document.getElementById('result');
+      const clearBtn = document.getElementById('clear-button');
+
+      function pickRandomChoice(choices) {
+        if (choices.length === 0) return '';
+        const index = Math.floor(Math.random() * choices.length);
+        return choices[index];
+      }
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const rawText = input.value.trim();
+        if (!rawText) {
+          resultDiv.textContent = '';
+          return;
+        }
+        // Split choices by comma, trim whitespace, filter out empty entries
+        const choices = rawText
+          .split(',')
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0);
+        if (choices.length === 0) {
+          resultDiv.textContent = '';
+          return;
+        }
+        const randomChoice = pickRandomChoice(choices);
+        resultDiv.textContent = randomChoice;
+      });
+
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        resultDiv.textContent = '';
+        input.focus();
+      });
+
+      // Focus input on load
+      window.addEventListener('load', () => {
+        input.focus();
+      });
+    })();
+
+    // Stars canvas animation
+
+    (() => {
+      const canvas = document.getElementById('stars-canvas');
+      const ctx = canvas.getContext('2d');
+      let width, height, stars;
+
+      function randomRange(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      class Star {
+        constructor() {
+          this.reset();
+        }
+
+        reset() {
+          this.x = Math.random() * width;
+          this.y = Math.random() * height;
+          this.radius = randomRange(0.5, 1.8);
+          this.alpha = randomRange(0.2, 1);
+          this.alphaChange = randomRange(0.004, 0.015);
+          this.increasing = Math.random() > 0.5;
+          this.speedX = randomRange(-0.02, 0.02);
+          this.speedY = randomRange(-0.01, 0.01);
+        }
+
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          if(this.x < 0) this.x = width;
+          if(this.x > width) this.x = 0;
+          if(this.y < 0) this.y = height;
+          if(this.y > height) this.y = 0;
+
+          if (this.increasing) {
+            this.alpha += this.alphaChange;
+            if (this.alpha >= 1) {
+              this.alpha = 1;
+              this.increasing = false;
+            }
+          } else {
+            this.alpha -= this.alphaChange;
+            if (this.alpha <= 0.2) {
+              this.alpha = 0.2;
+              this.increasing = true;
+            }
+          }
+        }
+
+        draw() {
+          const gradient = ctx.createRadialGradient(
+            this.x, this.y, 0,
+            this.x, this.y, this.radius * 8
+          );
+          gradient.addColorStop(0, `rgba(255,255,255,${this.alpha})`);
+          gradient.addColorStop(0.4, `rgba(200,225,255,${this.alpha * 0.3})`);
+          gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+          ctx.beginPath();
+          ctx.fillStyle = gradient;
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function init() {
+        resize();
+        stars = [];
+        const count = Math.floor((width * height) / 3000);
+        for (let i = 0; i < count; i++) {
+          stars.push(new Star());
+        }
+        animate();
+      }
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width * devicePixelRatio;
+        canvas.height = height * devicePixelRatio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        stars.forEach((star) => {
+          star.update();
+          star.draw();
+        });
+        requestAnimationFrame(animate);
+      }
+
+      window.addEventListener('resize', () => {
+        resize();
+      });
+
+      window.addEventListener('load', () => {
+        init();
+      });
+    })();
+  </script>
+</body>
+</html>
